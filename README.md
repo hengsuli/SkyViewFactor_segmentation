@@ -1,0 +1,1 @@
+U-net segmentation of fish-eye images to obtain SkyViewFactor (SVF)
