@@ -77,7 +77,7 @@ def circular_mask(img, save_dir=None):
     return
 
 def crop_square(fp, resize=(1024,1024),plot = True):
-    """ 
+    """ crops the SVF photo and resize it to 1024 x 1024px
     param fp (str or array) input can be a file path or a np.ndarray
     >>>crops just the circular SVF photo
     """
@@ -194,9 +194,12 @@ def rotate_image(fp, angle=90, plot = True,save_fp=None):
     return np.asarray(rot_im)
 
 def get_cropped_SVF(mask_fp,img_fp, plot=True, save_dir=None):
-    """ 
-    param mask_fp (str): filepath of mask
-    param img_fp (str): filepath of img
+    """ 1. mask SVF images with a circular mask, 2. crop SVF images to a square and resize it to 1024 x 1024, 3. then subset each image to 4 tiles, 4. save each tile image
+    Args:
+        mask_fp (str): filepath of mask
+        img_fp (str): filepath of img
+        plot (bool): whether to plot the cropped images
+        save_dir (str): file directory of where to store the images. filenames and extension are automatically saved
     """
     masked_img = mask_images(mask_fp,img_fp)
     sq_img = crop_square(masked_img, resize=(1024,1024),plot=False)
