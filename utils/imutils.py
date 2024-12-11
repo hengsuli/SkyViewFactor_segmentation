@@ -10,8 +10,11 @@ import shutil
 import json
 
 def get_classes(json_files):
-    """ 
-    identify distinct classes in the labelled json file
+    """ identify distinct classes in the labelled json file
+    Args:
+        json_files (list of str): list of filepaths to json files that contain labelling info 
+    Returns:
+        list of str: list of distinct classes labelled in the json files
     """
     classes_list = []
     for f in json_files:
@@ -26,6 +29,8 @@ def get_classes(json_files):
 def prepare_annotated_data(json_files,dir_name = "data_annotated"):
     """ 
     create a folder called data_annotated which contains the image and json file
+    Args:
+        json_files (list of str): list of filepaths to json files that contain labelling info 
     """
     for f in json_files:
         with open(f,'r') as file:
@@ -44,15 +49,20 @@ def prepare_annotated_data(json_files,dir_name = "data_annotated"):
     return
 
 def image_to_array(fp):
-    """ 
-    param fp (str): file path of image
+    """ returns image in numpy array given filepath
+    Args:
+        fp (str): file path of image
+    Returns:
+        np.ndarray: numpy array of the image
     """
     return np.asarray(Image.open(fp))
 
 def circular_mask(img, save_dir=None):
-    """ 
-    >>>create circular mask for image
-    >>>exports an RGB binary mask (mxnxc) if save_dir is True
+    """ creates a circular mask for future masking purposes
+    create circular mask for image
+    Args:
+        img (np.ndarray): image that has the same dimension as the SVF photo
+        save_dir (str): directory where to save the circular_mask image. Exports an RGB binary mask (mxnxc) if save_dir is True
     """
     nrow, ncol = img.shape[0], img.shape[1]
     radius = nrow//2
@@ -78,8 +88,11 @@ def circular_mask(img, save_dir=None):
 
 def crop_square(fp, resize=(1024,1024),plot = True):
     """ crops the SVF photo and resize it to 1024 x 1024px
-    param fp (str or array) input can be a file path or a np.ndarray
-    >>>crops just the circular SVF photo
+    crops just the circular SVF photo
+    Args: 
+        fp: (str or np.ndarray) input can be a file path or a np.ndarray
+    Returns:
+        np.ndarray: returns cropped and resized image.
     """
     if isinstance(fp,str):
         img = image_to_array(fp)
@@ -98,9 +111,14 @@ def crop_square(fp, resize=(1024,1024),plot = True):
     return cropped_img
 
 def mask_images(mask_fp,img_fp):
-    """ returns masked image """
+    """ returns masked image 
+    Args:
+        mask_fp (str): filepath to circular mask
+        img_fp (str): filepath to SVF image which should have the same dimension as the mask img
+    """
     mask = image_to_array(mask_fp)
     img = image_to_array(img_fp)
+    assert (img.shape[0] == mask.shape[0]) & (img.shape[1] == mask.shape[1]), "mask and img must have the same w & h dimensions!"
     if len(img.shape) == 3:
         return mask*img
     elif len(img.shape) == 2:
@@ -111,6 +129,8 @@ def mask_images(mask_fp,img_fp):
 def pad_images(img,img_dim = 512):
     """ 
     pad images if image column < img_dim
+    Args:
+        img (np.ndarray): subsetted/cropped image
     """
     nrow,ncol = img.shape[0],img.shape[1]
     if ncol > img_dim:
@@ -156,9 +176,11 @@ def crop_images(img,img_dim = 512):
     return cropped_images
 
 def save_imgs(cut_img_list,filename,save_dir):
-    """ 
-    param cut_img_list (list of np.ndarray): cropped images
-    save cropped images
+    """ save cropped images
+    Args:
+        cut_img_list (list of np.ndarray): list of cropped images
+        filename(str): prefix of the filename to better id the images
+        save_dir (str): directory of where to save the cropped images
     """
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -169,12 +191,14 @@ def save_imgs(cut_img_list,filename,save_dir):
     return
 
 def rotate_image(fp, angle=90, plot = True,save_fp=None):
-    """ 
-    param fp (str): filepath of image
-    param angle (float): angle in deg to rotate the image by
-    param plot (bool): to plot an original vs rotated im
-    param save_fp (str): file pathname
-    returns rotated image as np.ndarray
+    """ returns rotated image as np.ndarray
+    Args:
+        fp (str): filepath of image
+        angle (float): angle in deg to rotate the image by
+        plot (bool): to plot an original vs rotated im
+        save_fp (str): file pathname
+    Args:
+        np.ndarray: rotated image
     """
     im = Image.open(fp)
     rot_im = im.rotate(angle)
@@ -200,6 +224,8 @@ def get_cropped_SVF(mask_fp,img_fp, plot=True, save_dir=None):
         img_fp (str): filepath of img
         plot (bool): whether to plot the cropped images
         save_dir (str): file directory of where to store the images. filenames and extension are automatically saved
+    Returns:
+        list of np.ndarray: list of masked, cropped, and resized images
     """
     masked_img = mask_images(mask_fp,img_fp)
     sq_img = crop_square(masked_img, resize=(1024,1024),plot=False)
@@ -220,16 +246,20 @@ def get_cropped_SVF(mask_fp,img_fp, plot=True, save_dir=None):
     return cropped_images
 
 def predicted_to_binary(im,thresh=125):
-    """
-    param im (np.ndarray) mxn
-    >>> convert rgb image to binary
+    """convert predicted rgb image to binary classified image
+    Args:
+        im (np.ndarray): mxn
+    Returns:
+        np.ndarray: binary image
     """
     return np.where(im>thresh,1,0).astype(np.uint8)
 
 def stitch_cropped_images(predicted_img_fpList, plot = True):
-    """
-    param predicted_img_fpList (list of str) list of filepaths of the predicted img
-    >>> returns predicted stitched_img (np.ndarray): mxn
+    """returns predicted stitched_img (np.ndarray): mxn
+    Args:
+        predicted_img_fpList (list of str) list of filepaths of the predicted img
+    Returns:
+        np.ndarray: a stitched image from the cropped image
     """
     n_images = len(predicted_img_fpList)
     n_row = n_col = int(n_images**(1/2)) # sqrt number of images to obtain how many rows and cols of cropped images, assuming the original image is a square
@@ -255,11 +285,13 @@ def stitch_cropped_images(predicted_img_fpList, plot = True):
 
 
 def calculate_SVF(mask_fp,predicted_img, plot = True):
-    """ 
-    param mask_fp (str): filepath of mask
-    param img (np.ndarray) predicted image by the trained model, assumed to be 512x512 dimension
-    param img_fp (str): filepath of img
-    >>> returns SVF in percentage (float)
+    """ returns SVF in percentage (float)
+    Args:
+        mask_fp (str): filepath of mask
+        img (np.ndarray) predicted image by the trained model, assumed to be 512x512 dimension
+        img_fp (str): filepath of img
+    Returns:
+        float: calculated SVF in percentage
     """
     mask = image_to_array(mask_fp) # binary mask, where pixels==1 corresponds to the entire FOV
     mask = mask[:,:,0]
@@ -278,7 +310,12 @@ def calculate_SVF(mask_fp,predicted_img, plot = True):
     return SVF
 
 def find_latest_checkpoint(checkpoints_path, fail_safe=True):
-
+    """
+    Args:
+        checkpoints_path (str): name of checkpoint
+    Returns:
+        str: filepath of latest checkpoint file
+    """
     # This is legacy code, there should always be a "checkpoint" file in your directory
 
     def get_epoch_number_from_path(path):
@@ -311,6 +348,12 @@ def find_latest_checkpoint(checkpoints_path, fail_safe=True):
     return latest_epoch_checkpoint
 
 def model_from_checkpoint_path(checkpoints_path):
+    """load model from checkpoint path
+    Args:
+        checkpoints_path (str): path to checkpoints file
+    Returns:
+        trained model
+    """
 
     from keras_segmentation.models.all_models import model_from_name
     assert (os.path.isfile(checkpoints_path+"_config.json")
